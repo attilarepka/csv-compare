@@ -39,7 +39,7 @@ $ cargo build --release
 
 ## Usage
 
-Expurgator provides a command-line interface with the following options:
+csv-compare provides a command-line interface with the following options:
 
 ```shell
 Usage: csv-compare [OPTIONS] --orig-index <ORIG_INDEX> <ORIG> <DIFF>
