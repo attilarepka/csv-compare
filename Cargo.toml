@@ -2,6 +2,12 @@
 name = "csv-compare"
 version = "0.1.0"
 edition = "2024"
+description = "difftool for csv-files"
+licence = "MIT"
+authors = ["Attila Repka"]
+
+[package.metadata.deb]
+revision = ""
 
 [dependencies]
 anyhow = "1.0.97"
