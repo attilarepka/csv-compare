@@ -6,7 +6,7 @@ use inquire::Confirm;
 use similar::{ChangeTag, TextDiff};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "csv-compare", long_about = None)]
+#[command(author, version, about = None, long_about = None)]
 struct Args {
     /// Orig CSV file
     #[arg(index = 1)]
@@ -70,9 +70,9 @@ fn prompt_csv(orig: &[String], diff: &[String]) -> Result<()> {
             format!(
                 "\norig has {} records, first record: {}\ndiff has {} records, first record: {}\n",
                 orig.len(),
-                orig.first().unwrap(),
+                orig.first().unwrap_or(&"N/A".to_string()),
                 diff.len(),
-                diff.first().unwrap()
+                diff.first().unwrap_or(&"N/A".to_string())
             )
             .as_str(),
         )
