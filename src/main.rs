@@ -15,10 +15,10 @@ struct Args {
     #[arg(index = 2)]
     diff: String,
     /// Orig index of column to compare
-    #[arg(long)]
+    #[arg(long, short)]
     orig_index: usize,
-    /// Diff index of column to compare (optional, defaults to orig_index)
-    #[arg(long, required = false)]
+    /// Diff index of column to compare (optional, defaults to `orig_index`)
+    #[arg(long, short, required = false)]
     diff_index: Option<usize>,
     /// Search prefix of selected rows
     #[arg(long, short, required = false)]
@@ -30,8 +30,8 @@ struct Args {
 
 const DELIM: &str = "/";
 
-fn filter_prefix(orig: &str) -> Result<String> {
-    Ok(orig.split_once(DELIM).unwrap_or(("", "")).1.to_string())
+fn filter_prefix(orig: &str) -> String {
+    orig.split_once(DELIM).unwrap_or(("", "")).1.to_string()
 }
 
 fn parse_csv(
@@ -47,16 +47,12 @@ fn parse_csv(
 
     for record in reader.records() {
         if let Some(field) = record?.get(index - 1) {
-            match with_prefix {
-                Some(with_prefix) => {
-                    if field.starts_with(with_prefix) {
-                        res.push(filter_prefix(field)?);
-                    }
+            if let Some(with_prefix) = with_prefix {
+                if field.starts_with(with_prefix) {
+                    res.push(filter_prefix(field));
                 }
-                None => {
-                    res.push(field.to_string());
-                    continue;
-                }
+            } else {
+                res.push(field.to_string());
             }
         }
     }
@@ -110,8 +106,8 @@ fn main() -> Result<()> {
     println!("---a/{}", args.orig.bold());
     println!("+++b/{}", args.diff.bold());
 
-    let orig_slices: Vec<&str> = orig_lines.iter().map(|s| s.as_str()).collect();
-    let diff_slices: Vec<&str> = diff_lines.iter().map(|s| s.as_str()).collect();
+    let orig_slices: Vec<&str> = orig_lines.iter().map(String::as_str).collect();
+    let diff_slices: Vec<&str> = diff_lines.iter().map(String::as_str).collect();
 
     let diff = TextDiff::from_slices(&orig_slices, &diff_slices);
     for hunk in diff.unified_diff().iter_hunks() {
@@ -158,6 +154,6 @@ mod tests {
 
     #[test]
     fn test_filter_prefix() {
-        assert_eq!(filter_prefix("a a/1/1/1").unwrap(), "1/1/1");
+        assert_eq!(filter_prefix("a a/1/1/1"), "1/1/1");
     }
 }
