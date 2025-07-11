@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::{Result, anyhow};
 use clap::{ArgAction, Parser};
 use colored::Colorize;
@@ -10,10 +12,10 @@ use similar::{ChangeTag, TextDiff};
 struct Args {
     /// Orig CSV file
     #[arg(index = 1)]
-    orig: String,
+    orig: PathBuf,
     /// Diff CSV file
     #[arg(index = 2)]
-    diff: String,
+    diff: PathBuf,
     /// Orig index of column to compare
     #[arg(long, short)]
     orig_index: usize,
@@ -87,14 +89,14 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let orig_lines = parse_csv(
-        args.orig.as_str(),
+        args.orig.to_str().unwrap_or(""),
         args.orig_index,
         args.with_prefix.as_deref(),
         args.with_headers,
     )?;
 
     let diff_lines = parse_csv(
-        args.diff.as_str(),
+        args.diff.to_str().unwrap_or(""),
         args.diff_index.unwrap_or(args.orig_index),
         args.with_prefix.as_deref(),
         args.with_headers,
@@ -102,9 +104,25 @@ fn main() -> Result<()> {
 
     prompt_csv(&orig_lines, &diff_lines)?;
 
-    println!("diff a/{} b/{}", args.orig.bold(), args.diff.bold());
-    println!("---a/{}", args.orig.bold());
-    println!("+++b/{}", args.diff.bold());
+    let orig = args
+        .orig
+        .canonicalize()?
+        .into_os_string()
+        .into_string()
+        .unwrap()
+        .bold();
+    let orig_file = args.orig.file_name().unwrap().to_str().unwrap();
+    let diff = args
+        .diff
+        .canonicalize()?
+        .into_os_string()
+        .into_string()
+        .unwrap()
+        .bold();
+    let diff_file = args.diff.file_name().unwrap().to_str().unwrap();
+    println!("diff a/{orig_file} b/{diff_file}");
+    println!("---a{orig}");
+    println!("+++b{diff}");
 
     let orig_slices: Vec<&str> = orig_lines.iter().map(String::as_str).collect();
     let diff_slices: Vec<&str> = diff_lines.iter().map(String::as_str).collect();
