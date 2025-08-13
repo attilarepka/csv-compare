@@ -2,7 +2,7 @@
 
 csv-compare is a cli difftool for csv files.
 
-[![Build status](https://github.com/attilarepka/csv-compare/actions/workflows/tests.yml/badge.svg)](https://github.com/attilarepka/csv-compare/actions)
+![wordperms demo](vhs/demo.gif)
 
 ## Features
 
