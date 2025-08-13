@@ -104,25 +104,11 @@ fn main() -> Result<()> {
 
     prompt_csv(&orig_lines, &diff_lines)?;
 
-    let orig = args
-        .orig
-        .canonicalize()?
-        .into_os_string()
-        .into_string()
-        .unwrap()
-        .bold();
-    let orig_file = args.orig.file_name().unwrap().to_str().unwrap();
-    let diff = args
-        .diff
-        .canonicalize()?
-        .into_os_string()
-        .into_string()
-        .unwrap()
-        .bold();
-    let diff_file = args.diff.file_name().unwrap().to_str().unwrap();
-    println!("diff a/{orig_file} b/{diff_file}");
-    println!("---a{orig}");
-    println!("+++b{diff}");
+    let orig = args.orig.file_name().unwrap().to_str().unwrap();
+    let diff = args.diff.file_name().unwrap().to_str().unwrap();
+    println!("diff a/{orig} b/{diff}");
+    println!("---a/{orig}");
+    println!("+++b/{diff}");
 
     let orig_slices: Vec<&str> = orig_lines.iter().map(String::as_str).collect();
     let diff_slices: Vec<&str> = diff_lines.iter().map(String::as_str).collect();
