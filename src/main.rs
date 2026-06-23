@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
-use clap::{ArgAction, Parser};
+use clap::Parser;
 use colored::Colorize;
 use csv::ReaderBuilder;
 use inquire::Confirm;
@@ -26,7 +26,7 @@ struct Args {
     #[arg(long, short, required = false)]
     with_prefix: Option<String>,
     /// Whether CSV's have headers
-    #[arg(long, action = ArgAction::SetTrue)]
+    #[arg(long, default_value_t = true)]
     with_headers: bool,
 }
 
