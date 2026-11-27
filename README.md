@@ -21,8 +21,8 @@ then csv-compare can be installed using a binary `.deb` file provided in each
 [csv-compare release](https://github.com/attilarepka/csv-compare/releases).
 
 ```
-$ curl -LO https://github.com/attilarepka/csv-compare/releases/download/0.1.0/csv-compare_0.1.0_amd64.deb
-$ sudo dpkg -i csv-compare_0.1.0_amd64.deb
+$ curl -LO https://github.com/attilarepka/csv-compare/releases/download/0.2.0/csv-compare_0.2.0_amd64.deb
+$ sudo dpkg -i csv-compare_0.2.0_amd64.deb
 ```
 
 ### Building
