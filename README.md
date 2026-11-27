@@ -52,6 +52,7 @@ Options:
       --orig-index <ORIG_INDEX>    Orig index of column to compare
       --diff-index <DIFF_INDEX>    Diff index of column to compare (optional, defaults to orig_index)
   -w, --with-prefix <WITH_PREFIX>  Search prefix of selected rows
+      --archive-root               Filter by component in column 1 and remove its root from the selected path
       --with-headers               Whether CSV's have headers
   -h, --help                       Print help
   -V, --version                    Print version

@@ -18,13 +18,16 @@ struct Args {
     diff: PathBuf,
     /// Orig index of column to compare
     #[arg(long, short)]
-    orig_index: usize,
+    index: usize,
     /// Diff index of column to compare (optional, defaults to `orig_index`)
     #[arg(long, short, required = false)]
     diff_index: Option<usize>,
     /// Search prefix of selected rows
     #[arg(long, short, required = false)]
     with_prefix: Option<String>,
+    /// Filter by component in column 1 and remove its root from the selected path
+    #[arg(long)]
+    archive_root: bool,
     /// Whether CSV's have headers
     #[arg(long, default_value_t = true)]
     with_headers: bool,
@@ -41,14 +44,50 @@ fn parse_csv(
     index: usize,
     with_prefix: Option<&str>,
     with_headers: bool,
+    archive_root: bool,
 ) -> Result<Vec<String>> {
     let mut reader = ReaderBuilder::new()
         .has_headers(with_headers)
         .from_path(path)?;
     let mut res = Vec::new();
 
-    for record in reader.records() {
-        if let Some(field) = record?.get(index - 1) {
+    for (row, record) in reader.records().enumerate() {
+        let record = record?;
+        if archive_root {
+            let component = record
+                .get(0)
+                .filter(|component| !component.is_empty())
+                .ok_or_else(|| anyhow!("Missing component in record {}", row + 1))?;
+            if with_prefix.is_some_and(|prefix| !component.starts_with(prefix)) {
+                continue;
+            }
+            let field = record
+                .get(
+                    index
+                        .checked_sub(1)
+                        .ok_or_else(|| anyhow!("Column index must be greater than zero"))?,
+                )
+                .ok_or_else(|| anyhow!("Missing column {index} in record {}", row + 1))?;
+            let relative = if let Some(relative) = field.strip_prefix('/') {
+                relative
+            } else {
+                field
+                    .strip_prefix(component)
+                    .and_then(|path| path.strip_prefix('/'))
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "Path '{}' in record {} does not start with component '{}'",
+                            field,
+                            row + 1,
+                            component
+                        )
+                    })?
+            };
+            if relative.is_empty() {
+                return Err(anyhow!("Empty relative path in record {}", row + 1));
+            }
+            res.push(relative.to_string());
+        } else if let Some(field) = record.get(index - 1) {
             if let Some(with_prefix) = with_prefix {
                 if field.starts_with(with_prefix) {
                     res.push(filter_prefix(field));
@@ -90,16 +129,18 @@ fn main() -> Result<()> {
 
     let orig_lines = parse_csv(
         args.orig.to_str().unwrap_or(""),
-        args.orig_index,
+        args.index,
         args.with_prefix.as_deref(),
         args.with_headers,
+        args.archive_root,
     )?;
 
     let diff_lines = parse_csv(
         args.diff.to_str().unwrap_or(""),
-        args.diff_index.unwrap_or(args.orig_index),
+        args.diff_index.unwrap_or(args.index),
         args.with_prefix.as_deref(),
         args.with_headers,
+        args.archive_root,
     )?;
 
     prompt_csv(&orig_lines, &diff_lines)?;
@@ -138,12 +179,12 @@ mod tests {
         let file = assert_fs::NamedTempFile::new("input.csv").unwrap();
         file.write_str("1,2,some some/some/path,4\n1,2,some some/some/other/path,4")
             .unwrap();
-        let output = parse_csv(file.path().to_str().unwrap(), 3, None, false).unwrap();
+        let output = parse_csv(file.path().to_str().unwrap(), 3, None, false, false).unwrap();
         assert_eq!(output.len(), 2);
         assert_eq!(output[0], "some some/some/path");
         assert_eq!(output[1], "some some/some/other/path");
 
-        let output = parse_csv(file.path().to_str().unwrap(), 3, None, true).unwrap();
+        let output = parse_csv(file.path().to_str().unwrap(), 3, None, true, false).unwrap();
         assert_eq!(output.len(), 1);
         assert_eq!(output[0], "some some/some/other/path");
 
@@ -151,7 +192,8 @@ mod tests {
         file.write_str("1,2,some some/other/path,4\n1,2,ayy some/ayy/other/path,4")
             .unwrap();
 
-        let output = parse_csv(file.path().to_str().unwrap(), 3, Some("some"), false).unwrap();
+        let output =
+            parse_csv(file.path().to_str().unwrap(), 3, Some("some"), false, false).unwrap();
         assert_eq!(output.len(), 1);
         assert_eq!(output[0], "other/path");
     }
@@ -159,5 +201,29 @@ mod tests {
     #[test]
     fn test_filter_prefix() {
         assert_eq!(filter_prefix("a a/1/1/1"), "1/1/1");
+    }
+
+    #[test]
+    fn archive_root_normalizes_paths_and_filters_components() {
+        let file = assert_fs::NamedTempFile::new("input.csv").unwrap();
+        file.write_str(concat!(
+            "component,path\n",
+            "golang/go go1.26,golang/go go1.26/src/main.go\n",
+            "golang/go go1.27,/src/main.go\n",
+            "golang.org/x/sys,golang.org/x/sys/windows/file.exe\n",
+            "python,/src/other.py\n"
+        ))
+        .unwrap();
+        let output = parse_csv(file.path().to_str().unwrap(), 2, Some("go"), true, true).unwrap();
+        assert_eq!(output, ["src/main.go", "src/main.go", "windows/file.exe"]);
+    }
+
+    #[test]
+    fn archive_root_rejects_invalid_paths() {
+        let file = assert_fs::NamedTempFile::new("input.csv").unwrap();
+        for path in ["other/file", "golang/file", "/", "golang/go/"] {
+            file.write_str(&format!("golang/go,{path}\n")).unwrap();
+            assert!(parse_csv(file.path().to_str().unwrap(), 2, None, false, true).is_err());
+        }
     }
 }
